@@ -16,29 +16,22 @@ DEFAULT_API_URL = "https://theaisource-u29564.vm.elestio.app:57987"
 DEFAULT_USERNAME = "root"
 DEFAULT_PASSWORD = "eZfLK3X4-SX0i-UmgUBe6E"
 
-# Predefined bots
+# Predefined bot personalities
 BOT_PERSONALITIES = {
     "Startup Strategist": "You specialize in helping new businesses with planning and execution.",
     "Hip-Hop Guru": (
         "Welcome to Hip-Hop Guru, the chatbot that knows the beats, rhymes, and stories of the hip-hop world! "
         "Whether you're curious about the origins of the genre, looking for the latest news on your favorite artists, "
-        "or searching for song lyrics and meanings, Hip-Hop Guru has got you covered. "
-        "* Artist Bios: Get detailed information on hip-hop legends and emerging stars. "
-        "* Song Facts: Discover the stories behind the hottest tracks and classic anthems. "
-        "* Lyrics Genius: Find lyrics and breakdowns of complex verses. "
-        "* Album Reviews: Stay updated with reviews of the latest albums. "
-        "* Hip-Hop History: Learn about the evolution of hip-hop from its roots to the global phenomenon it is today. "
-        "* Trends & News: Keep up with the latest trends and news in the hip-hop scene."
+        "or searching for song lyrics and meanings, Hip-Hop Guru has got you covered."
     ),
     "Generational Copy": (
-        "At Generational Copy, LLC, we help each generation write and share their unique stories. "
-        "Our services include professional ghostwriting, expert editing, dynamic publishing solutions, "
-        "innovative writing courses, and inspirational books. We are your partners in storytelling."
+        "At Generational Copy, LLC, we specialize in helping each generation write and share their unique stories. "
+        "Whether you're a first-time writer or a seasoned author, our tailored services guide you through the writing process."
     ),
     "Jasmine Renee": (
-        "I am a motivational speaker sharing God's love to inspire hope, connection, and mindful living. "
-        "My goal is to help others come back into alignment with their Divine Connection."
-    )
+        "I am a motivational speaker with a message sharing God’s love that inspires others to align with their Divine Connection. "
+        "My goal is to inspire hope, connection, and mindful living."
+    ),
 }
 
 def initialize_api_config():
@@ -51,7 +44,16 @@ def initialize_api_config():
         st.session_state.password = DEFAULT_PASSWORD
 
 def send_message_to_ollama(message: str, bot_personality: str) -> Dict:
-    """Send a message to LLaMA 3.2 API and return the response."""
+    """
+    Send a message to the LLaMA 3.2 API and return the response.
+    
+    Args:
+        message (str): User's message input.
+        bot_personality (str): The selected bot's personality.
+    
+    Returns:
+        Dict: API response.
+    """
     headers = {"Content-Type": "application/json"}
     payload = {
         "prompt": f"{bot_personality}\nUser: {message}\nAssistant:",
@@ -64,7 +66,7 @@ def send_message_to_ollama(message: str, bot_personality: str) -> Dict:
             auth=(st.session_state.username, st.session_state.password),
             headers=headers,
             json=payload,
-            timeout=30
+            timeout=90  # Set timeout to 90 seconds
         )
         response.raise_for_status()
         return response.json()
@@ -80,11 +82,15 @@ def download_chat_history():
 def summarize_chat():
     """Summarize the chat history."""
     messages = [msg["content"] for msg in st.session_state.messages if msg["role"] == "user"]
-    summary = "Summary of your chat:\n" + "\n".join(messages[-5:])
-    st.session_state.messages.append({"role": "assistant", "content": summary})
-    st.success("Chat summarized!")
+    if messages:
+        summary = "Summary of your chat:\n" + "\n".join(messages[-5:])
+        st.session_state.messages.append({"role": "assistant", "content": summary})
+        st.success("Chat summarized!")
+    else:
+        st.warning("No messages to summarize.")
 
 def main():
+    """Main function to run the Streamlit app."""
     initialize_api_config()
 
     st.set_page_config(page_title="Advanced Multi-Bot Chat", page_icon="🤖", layout="wide")
@@ -93,8 +99,12 @@ def main():
     # Sidebar for bot selection and customization
     with st.sidebar:
         st.markdown("### Select a Bot")
-        # Ensure selected bot exists in the predefined list
-        bot_name = st.selectbox("Choose a Bot", list(BOT_PERSONALITIES.keys()), index=list(BOT_PERSONALITIES.keys()).index(st.session_state.selected_bot) if st.session_state.selected_bot in BOT_PERSONALITIES else 0)
+        bot_name = st.selectbox(
+            "Choose a Bot", 
+            list(BOT_PERSONALITIES.keys()), 
+            index=list(BOT_PERSONALITIES.keys()).index(st.session_state.selected_bot)
+            if st.session_state.selected_bot in BOT_PERSONALITIES else 0
+        )
         st.session_state.selected_bot = bot_name
         bot_personality = BOT_PERSONALITIES[bot_name]
 
