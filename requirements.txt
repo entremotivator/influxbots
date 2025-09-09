@@ -3,7 +3,7 @@
 PyPDF2
 # Streamlit for web interface
 streamlit>=1.28.0
-
+docx
 # LangChain ecosystem
 langchain>=0.0.350
 langchain-openai>=0.0.2
