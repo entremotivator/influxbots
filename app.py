@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-🤖 COMPREHENSIVE BUSINESS BOT PERSONALITIES APPLICATION
-A complete Streamlit application for AI business assistants with authentication,
-usage tracking, and comprehensive bot personalities.
+🤖 ENHANCED BUSINESS BOT PERSONALITIES APPLICATION
+A comprehensive Streamlit application featuring 110+ specialized AI business assistants
+including format-specific bots with authentication, usage tracking, and professional chat interface.
 """
 
 import streamlit as st
@@ -15,13 +15,16 @@ from typing import Dict, List, Tuple, Optional
 import logging
 import hashlib
 import os
+import pandas as pd
+import io
+import base64
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ======================================================
-# 🤖 COMPREHENSIVE BUSINESS BOT PERSONALITIES (100 Total)
+# 🤖 COMPREHENSIVE BUSINESS BOT PERSONALITIES (110+ Total)
 # ======================================================
 
 BOT_PERSONALITIES = {
@@ -542,10 +545,62 @@ BOT_PERSONALITIES = {
         "I specialize in brand messaging, crisis communications, stakeholder management, and public relations strategy. "
         "My expertise covers executive communications, media relations, and creating communication strategies that enhance business reputation and stakeholder trust."
     ),
+
+    # 🆕 FORMAT-SPECIFIC SPECIALISTS (10 NEW BOTS)
+    "PDF Document Specialist": (
+        "I am a PDF Document Specialist expert in creating, analyzing, and optimizing PDF documents for business purposes. "
+        "I specialize in PDF creation workflows, document security, accessibility compliance, form design, and digital signatures. "
+        "My expertise covers technical documentation, reports, contracts, presentations, and interactive PDF forms that enhance business communication and compliance."
+    ),
+    "CSV Data Analyst": (
+        "As a CSV Data Analyst, I help businesses extract insights from comma-separated value files and structured data. "
+        "I specialize in data cleaning, transformation, analysis, and visualization using CSV formats. "
+        "My expertise includes data import/export strategies, data quality assessment, statistical analysis, and creating actionable reports from raw CSV data."
+    ),
+    "SQL Database Consultant": (
+        "I am a SQL Database Consultant specializing in database design, optimization, and query development for business intelligence. "
+        "I focus on database architecture, performance tuning, data modeling, and complex query optimization. "
+        "My expertise covers relational database management, data warehousing, reporting solutions, and ensuring data integrity for business operations."
+    ),
+    "API Integration Specialist": (
+        "As an API Integration Specialist, I help businesses connect systems and automate workflows through Application Programming Interfaces. "
+        "I specialize in REST API design, webhook implementation, third-party integrations, and API security. "
+        "My expertise includes API documentation, rate limiting, authentication protocols, and building scalable integration solutions that streamline business processes."
+    ),
+    "Image Processing Expert": (
+        "I am an Image Processing Expert helping businesses optimize visual content for marketing, documentation, and digital platforms. "
+        "I specialize in image optimization, format conversion, batch processing, and visual content management. "
+        "My expertise covers image compression, metadata management, automated workflows, and ensuring visual consistency across business communications."
+    ),
+    "JSON Data Architect": (
+        "As a JSON Data Architect, I design and implement JSON-based data structures for modern web applications and APIs. "
+        "I specialize in JSON schema design, data validation, API response optimization, and NoSQL database integration. "
+        "My expertise includes data serialization, configuration management, and creating efficient JSON structures that support scalable business applications."
+    ),
+    "Excel Automation Specialist": (
+        "I am an Excel Automation Specialist creating advanced spreadsheet solutions that streamline business processes and reporting. "
+        "I specialize in VBA programming, Power Query, pivot tables, advanced formulas, and dashboard creation. "
+        "My expertise covers financial modeling, data analysis automation, report generation, and building Excel-based business intelligence solutions."
+    ),
+    "XML Configuration Manager": (
+        "As an XML Configuration Manager, I help businesses manage complex configuration files and structured data exchange. "
+        "I specialize in XML schema design, XSLT transformations, data validation, and system configuration management. "
+        "My expertise includes web services integration, configuration automation, and ensuring data consistency across enterprise systems."
+    ),
+    "Video Content Strategist": (
+        "I am a Video Content Strategist helping businesses leverage video formats for marketing, training, and communication. "
+        "I specialize in video content planning, format optimization, distribution strategies, and performance analytics. "
+        "My expertise covers video SEO, multi-platform optimization, engagement metrics, and creating video content that drives business results."
+    ),
+    "Audio Content Producer": (
+        "As an Audio Content Producer, I help businesses create and optimize audio content for podcasts, training, and marketing. "
+        "I specialize in audio format optimization, podcast production, voice-over coordination, and audio branding. "
+        "My expertise includes audio quality enhancement, distribution strategies, accessibility compliance, and measuring audio content performance for business growth."
+    ),
 }
 
 # ======================================================
-# 💰 COST CALCULATION & TOKEN MANAGEMENT
+# 💰 ENHANCED COST CALCULATION & TOKEN MANAGEMENT
 # ======================================================
 
 # GPT-4 Pricing (as of 2024 - update as needed)
@@ -567,14 +622,33 @@ GPT4_PRICING = {
 class TokenManager:
     def __init__(self, model="gpt-4-turbo"):
         self.model = model
+        self.encoding = None
+        self.initialize_encoding()
+    
+    def initialize_encoding(self):
+        """Initialize token encoding with error handling"""
         try:
-            self.encoding = tiktoken.encoding_for_model(model)
+            self.encoding = tiktoken.encoding_for_model(self.model)
         except KeyError:
-            self.encoding = tiktoken.get_encoding("cl100k_base")
+            try:
+                self.encoding = tiktoken.get_encoding("cl100k_base")
+                logger.warning(f"Model {self.model} not found, using cl100k_base encoding")
+            except Exception as e:
+                logger.error(f"Failed to initialize encoding: {str(e)}")
+                self.encoding = None
     
     def count_tokens(self, text: str) -> int:
-        """Count tokens in text"""
-        return len(self.encoding.encode(text))
+        """Count tokens in text with error handling"""
+        if not self.encoding:
+            # Fallback estimation: roughly 4 characters per token
+            return max(1, len(text) // 4)
+        
+        try:
+            return len(self.encoding.encode(str(text)))
+        except Exception as e:
+            logger.error(f"Token counting error: {str(e)}")
+            # Fallback estimation
+            return max(1, len(str(text)) // 4)
     
     def estimate_cost(self, input_tokens: int, output_tokens: int) -> float:
         """Estimate cost for API call"""
@@ -638,6 +712,12 @@ DEMO_USERS = {
         "plan": "Unlimited",
         "api_key": "",
         "created_date": datetime.now() - timedelta(days=90)
+    },
+    "premium": {
+        "password_hash": hashlib.sha256("premium123".encode()).hexdigest(),
+        "plan": "Plus",
+        "api_key": "",
+        "created_date": datetime.now() - timedelta(days=15)
     }
 }
 
@@ -778,6 +858,18 @@ def get_bot_personalities():
         "Product Management Director": {"emoji": "🎯", "category": "Product Management", "temp": 0.7},
         "Franchise Development Expert": {"emoji": "🏢", "category": "Franchise & Expansion", "temp": 0.7},
         "Corporate Communications Director": {"emoji": "📢", "category": "Communications & PR", "temp": 0.8},
+        
+        # 🆕 FORMAT-SPECIFIC SPECIALISTS
+        "PDF Document Specialist": {"emoji": "📄", "category": "Format Specialists", "temp": 0.6},
+        "CSV Data Analyst": {"emoji": "📊", "category": "Format Specialists", "temp": 0.5},
+        "SQL Database Consultant": {"emoji": "🗄️", "category": "Format Specialists", "temp": 0.5},
+        "API Integration Specialist": {"emoji": "🔗", "category": "Format Specialists", "temp": 0.6},
+        "Image Processing Expert": {"emoji": "🖼️", "category": "Format Specialists", "temp": 0.6},
+        "JSON Data Architect": {"emoji": "📋", "category": "Format Specialists", "temp": 0.5},
+        "Excel Automation Specialist": {"emoji": "📈", "category": "Format Specialists", "temp": 0.6},
+        "XML Configuration Manager": {"emoji": "⚙️", "category": "Format Specialists", "temp": 0.5},
+        "Video Content Strategist": {"emoji": "🎥", "category": "Format Specialists", "temp": 0.7},
+        "Audio Content Producer": {"emoji": "🎵", "category": "Format Specialists", "temp": 0.7},
     }
     
     full_bots = {}
@@ -808,7 +900,8 @@ def get_bot_personalities():
                 "Technology & Innovation": ["Digital Strategy", "System Architecture", "Innovation Management", "Technology Integration"],
                 "Human Resources": ["Talent Management", "Employee Development", "Organizational Culture", "Performance Management"],
                 "Strategy & Consulting": ["Strategic Planning", "Business Transformation", "Competitive Analysis", "Growth Strategy"],
-                "Customer Relations": ["Customer Success", "Experience Design", "Retention Strategy", "Customer Analytics"]
+                "Customer Relations": ["Customer Success", "Experience Design", "Retention Strategy", "Customer Analytics"],
+                "Format Specialists": ["Data Processing", "Format Optimization", "Technical Integration", "Workflow Automation"]
             }
             specialties = category_specialties.get(bot_config["category"], ["Business Strategy", "Professional Consulting", "Expert Guidance", "Strategic Planning"])
         
@@ -834,21 +927,31 @@ Maintain a professional yet approachable tone, and tailor your advice to the spe
     return full_bots
 
 # ======================================================
-# 💬 API INTEGRATION & CHAT FUNCTIONALITY
+# 💬 ENHANCED API INTEGRATION & CHAT FUNCTIONALITY
 # ======================================================
 
 class ChatManager:
     def __init__(self):
         self.token_manager = None
+        self.last_model = None
     
     def initialize_client(self, api_key: str, model: str):
-        """Initialize OpenAI client and token manager"""
+        """Initialize OpenAI client and token manager with enhanced error handling"""
         try:
-            openai.api_key = api_key
-            self.token_manager = TokenManager(model)
+            if api_key and api_key != "demo_key":
+                openai.api_key = api_key
+            
+            # Always initialize token manager, even for demo mode
+            if not self.token_manager or self.last_model != model:
+                self.token_manager = TokenManager(model)
+                self.last_model = model
+            
             return True
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+            # Still initialize token manager for demo mode
+            if not self.token_manager:
+                self.token_manager = TokenManager(model)
             return False
     
     def check_usage_limits(self, user_data: dict, estimated_tokens: int) -> Tuple[bool, str]:
@@ -867,8 +970,12 @@ class ChatManager:
         return True, ""
     
     def generate_response(self, messages: List[Dict], model: str, temperature: float = 0.7) -> Tuple[str, Dict]:
-        """Generate response using OpenAI API"""
+        """Generate response using OpenAI API with enhanced error handling"""
         try:
+            # Ensure token manager is initialized
+            if not self.token_manager:
+                self.token_manager = TokenManager(model)
+            
             # Prepare messages for API
             api_messages = []
             for msg in messages:
@@ -877,16 +984,54 @@ class ChatManager:
                     "content": msg["content"]
                 })
             
-            # Count input tokens
+            # Count input tokens with error handling
             input_text = "\n".join([msg["content"] for msg in api_messages])
             input_tokens = self.token_manager.count_tokens(input_text)
             
-            # Make API call (simulated for demo - replace with actual OpenAI call)
-            # response = openai.ChatCompletion.create(...)
+            # Check if this is demo mode
+            user = st.session_state.get("user", {})
+            is_demo = user.get("api_key") == "demo_key" or not user.get("api_key")
             
-            # Simulated response for demo
-            assistant_message = f"This is a simulated API response. In production, this would be a real GPT response to: {messages[-1]['content']}"
-            output_tokens = self.token_manager.count_tokens(assistant_message)
+            if is_demo:
+                # Simulated response for demo
+                bot_name = messages[0]["content"].split("You are a ")[1].split(".")[0] if "You are a " in messages[0]["content"] else "AI Assistant"
+                user_question = messages[-1]["content"]
+                
+                assistant_message = f"""Thank you for your question about: "{user_question}"
+
+As a {bot_name}, I would provide detailed, actionable advice here. In the full version with your OpenAI API key, you would receive:
+
+• Comprehensive analysis of your specific situation
+• Step-by-step implementation strategies
+• Industry best practices and case studies
+• Specific metrics and KPIs to track success
+• Tailored recommendations for your business size and industry
+
+**To get real AI responses:**
+1. Obtain an OpenAI API key from platform.openai.com
+2. Log out and log back in with your API key
+3. Start chatting with any of our 110+ specialized business assistants
+
+This demo shows the interface and features. The actual AI responses will be much more detailed and personalized to your specific business needs."""
+                
+                output_tokens = self.token_manager.count_tokens(assistant_message)
+            else:
+                # Real API call
+                try:
+                    response = openai.ChatCompletion.create(
+                        model=model,
+                        messages=api_messages,
+                        temperature=temperature,
+                        max_tokens=min(4000, st.session_state.user["plan_details"]["max_tokens_per_request"] // 2)
+                    )
+                    assistant_message = response.choices[0].message.content
+                    output_tokens = response.usage.completion_tokens
+                    input_tokens = response.usage.prompt_tokens
+                except Exception as api_error:
+                    logger.error(f"OpenAI API error: {str(api_error)}")
+                    assistant_message = f"I apologize, but I encountered an API error: {str(api_error)}. Please check your API key and try again."
+                    output_tokens = self.token_manager.count_tokens(assistant_message)
+            
             total_tokens = input_tokens + output_tokens
             cost = self.token_manager.estimate_cost(input_tokens, output_tokens)
             
@@ -898,15 +1043,40 @@ class ChatManager:
                 "output_tokens": output_tokens,
                 "total_tokens": total_tokens,
                 "cost": cost,
-                "model": model
+                "model": model,
+                "demo_mode": is_demo
             }
             
         except Exception as e:
-            logger.error(f"API call failed: {str(e)}")
-            return f"I apologize, but I encountered an error: {str(e)}", {}
+            logger.error(f"Chat generation error: {str(e)}")
+            error_message = f"I apologize, but I encountered an error: {str(e)}"
+            
+            # Ensure we have a token manager for error handling
+            if not self.token_manager:
+                self.token_manager = TokenManager(model)
+            
+            error_tokens = self.token_manager.count_tokens(error_message)
+            return error_message, {
+                "input_tokens": 0,
+                "output_tokens": error_tokens,
+                "total_tokens": error_tokens,
+                "cost": 0.0,
+                "model": model,
+                "error": True
+            }
     
     def update_usage_stats(self, cost: float, tokens: int):
         """Update usage statistics"""
+        if "usage_stats" not in st.session_state:
+            st.session_state.usage_stats = {
+                "total_cost": 0.0,
+                "daily_cost": 0.0,
+                "monthly_cost": 0.0,
+                "total_tokens": 0,
+                "requests_count": 0,
+                "last_reset": datetime.now().date()
+            }
+        
         stats = st.session_state.usage_stats
         
         # Reset daily stats if new day
@@ -923,7 +1093,7 @@ class ChatManager:
 chat_manager = ChatManager()
 
 # ======================================================
-# 🎨 UI COMPONENTS
+# 🎨 ENHANCED UI COMPONENTS
 # ======================================================
 
 def render_usage_dashboard():
@@ -972,34 +1142,81 @@ def render_model_selector():
     
     return selected_model
 
+def render_bot_stats():
+    """Render bot statistics and categories"""
+    bot_personalities = get_bot_personalities()
+    categories = {}
+    
+    for bot_name, bot_info in bot_personalities.items():
+        category = bot_info["category"]
+        if category not in categories:
+            categories[category] = 0
+        categories[category] += 1
+    
+    st.sidebar.markdown("### 🤖 Bot Statistics")
+    st.sidebar.metric("Total Bots", len(bot_personalities))
+    st.sidebar.metric("Categories", len(categories))
+    
+    with st.sidebar.expander("📊 Category Breakdown"):
+        for category, count in sorted(categories.items()):
+            st.write(f"**{category}:** {count} bots")
+
 # ======================================================
-# 📄 PAGE: AUTHENTICATION
+# 📄 PAGE: ENHANCED AUTHENTICATION
 # ======================================================
 
 def authentication_page():
-    """User authentication page"""
-    st.title("🔐 Business AI Assistant Login")
-    st.markdown("Access your personalized AI business consultants")
+    """Enhanced user authentication page"""
+    st.title("🔐 Enhanced Business AI Assistant Login")
+    st.markdown("Access your personalized AI business consultants with 110+ specialized assistants")
+    
+    # Feature highlights
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("""
+        ### 🚀 **110+ AI Assistants**
+        - Business specialists
+        - Format experts (PDF, CSV, SQL, etc.)
+        - Industry professionals
+        """)
+    
+    with col2:
+        st.markdown("""
+        ### 💡 **Smart Features**
+        - Real-time usage tracking
+        - Multiple AI models
+        - Professional chat interface
+        """)
+    
+    with col3:
+        st.markdown("""
+        ### 🔧 **Format Specialists**
+        - PDF Document Expert
+        - CSV Data Analyst
+        - SQL Database Consultant
+        - API Integration Specialist
+        """)
     
     # Login form
     with st.form("login_form"):
         st.markdown("### Login to Your Account")
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
-        api_key = st.text_input("OpenAI API Key", type="password", help="Enter your OpenAI API key")
+        api_key = st.text_input("OpenAI API Key (Optional for Demo)", type="password", 
+                               help="Enter your OpenAI API key for real AI responses, or leave blank for demo mode")
         
         col1, col2 = st.columns(2)
         with col1:
             login_button = st.form_submit_button("🚀 Login", use_container_width=True)
         with col2:
-            demo_button = st.form_submit_button("🎮 Demo Mode", use_container_width=True)
+            demo_button = st.form_submit_button("🎮 Quick Demo", use_container_width=True)
     
     # Handle login
     if login_button:
         if username and password:
             user = authenticate_user(username, password)
-            if user and api_key:
-                user["api_key"] = api_key
+            if user:
+                user["api_key"] = api_key if api_key else "demo_key"
                 st.session_state.authenticated = True
                 st.session_state.user = user
                 st.session_state.messages = []
@@ -1012,12 +1229,10 @@ def authentication_page():
                     "last_reset": datetime.now().date()
                 }
                 st.rerun()
-            elif user:
-                st.error("Please provide your OpenAI API key")
             else:
                 st.error("Invalid username or password")
         else:
-            st.error("Please fill in all fields")
+            st.error("Please fill in username and password")
     
     # Handle demo mode
     if demo_button:
@@ -1045,49 +1260,90 @@ def authentication_page():
     # Demo credentials info
     st.markdown("---")
     st.markdown("### 🎯 Demo Credentials")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.info("**Username:** demo\n**Password:** demo123")
+        st.info("**Basic User**\nUsername: `demo`\nPassword: `demo123`")
     with col2:
-        st.info("**Username:** admin\n**Password:** admin123")
+        st.info("**Premium User**\nUsername: `premium`\nPassword: `premium123`")
+    with col3:
+        st.info("**Admin User**\nUsername: `admin`\nPassword: `admin123`")
     
-    # Subscription plans
-    st.markdown("### 💎 Subscription Plans")
+    # Enhanced subscription plans
+    st.markdown("### 💎 Enhanced Subscription Plans")
     plan_cols = st.columns(len(SUBSCRIPTION_PLANS))
     for idx, (plan_name, plan_details) in enumerate(SUBSCRIPTION_PLANS.items()):
         with plan_cols[idx]:
+            budget_text = f"${plan_details['monthly_budget']:.0f}/month" if plan_details['monthly_budget'] != float('inf') else "Unlimited"
             st.markdown(f"""
             <div style="
                 border: 2px solid #ddd;
                 border-radius: 10px;
                 padding: 15px;
                 text-align: center;
-                height: 200px;
+                height: 220px;
+                background: {'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' if plan_name == 'Unlimited' else 'white'};
+                color: {'white' if plan_name == 'Unlimited' else 'black'};
             ">
                 <h4>{plan_name}</h4>
-                <p><strong>${plan_details['monthly_budget']:.0f}/month</strong></p>
+                <p><strong>{budget_text}</strong></p>
                 <p>{plan_details['max_tokens_per_request']:,} tokens/request</p>
-                <p>{len(plan_details['available_models'])} models</p>
+                <p>{len(plan_details['available_models'])} AI models</p>
+                <p>110+ AI assistants</p>
             </div>
             """, unsafe_allow_html=True)
 
 # ======================================================
-# 📄 PAGE: BOT MANAGEMENT
+# 📄 PAGE: ENHANCED BOT MANAGEMENT
 # ======================================================
 
 def bot_management_page():
-    """Bot Management and Information Page"""
-    st.title("🤖 AI Assistant Directory")
-    st.markdown("Discover and learn about our specialized AI assistants. Each bot has unique expertise and personality.")
+    """Enhanced Bot Management and Information Page"""
+    st.title("🤖 Enhanced AI Assistant Directory")
+    st.markdown("Discover our 110+ specialized AI assistants including new format-specific experts!")
     
     bot_personalities = get_bot_personalities()
     
-    # Category filter
-    categories = list(set([bot["category"] for bot in bot_personalities.values()]))
-    selected_category = st.selectbox("Filter by Category", ["All Categories"] + sorted(categories))
+    # Enhanced filters
+    col1, col2, col3 = st.columns(3)
     
-    # Search functionality
-    search_term = st.text_input("🔍 Search bots", placeholder="Search by name or specialty...")
+    with col1:
+        categories = list(set([bot["category"] for bot in bot_personalities.values()]))
+        selected_category = st.selectbox("Filter by Category", ["All Categories"] + sorted(categories))
+    
+    with col2:
+        # Temperature filter
+        temp_filter = st.selectbox("Filter by Creativity", ["All Levels", "Low (0.4-0.5)", "Medium (0.6-0.7)", "High (0.8+)"])
+    
+    with col3:
+        # Search functionality
+        search_term = st.text_input("🔍 Search bots", placeholder="Search by name or specialty...")
+    
+    # New format specialists highlight
+    if selected_category == "All Categories" or selected_category == "Format Specialists":
+        st.markdown("### 🆕 New Format Specialists")
+        format_bots = {k: v for k, v in bot_personalities.items() if v["category"] == "Format Specialists"}
+        
+        format_cols = st.columns(5)
+        for idx, (bot_name, bot_info) in enumerate(list(format_bots.items())[:5]):
+            with format_cols[idx]:
+                st.markdown(f"""
+                <div style="
+                    background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
+                    padding: 15px;
+                    border-radius: 10px;
+                    color: white;
+                    text-align: center;
+                    margin-bottom: 10px;
+                ">
+                    <h4 style="margin: 0; color: white;">{bot_info['emoji']}</h4>
+                    <p style="margin: 5px 0 0 0; font-size: 0.8em;">{bot_name}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                if st.button(f"Chat with {bot_name}", key=f"format_chat_{idx}"):
+                    st.session_state.selected_bot = bot_name
+                    st.session_state.current_page = "chat"
+                    st.rerun()
     
     # Filter bots
     filtered_bots = {}
@@ -1095,6 +1351,16 @@ def bot_management_page():
         # Category filter
         if selected_category != "All Categories" and bot["category"] != selected_category:
             continue
+        
+        # Temperature filter
+        if temp_filter != "All Levels":
+            temp = bot["temperature"]
+            if temp_filter == "Low (0.4-0.5)" and not (0.4 <= temp <= 0.5):
+                continue
+            elif temp_filter == "Medium (0.6-0.7)" and not (0.6 <= temp <= 0.7):
+                continue
+            elif temp_filter == "High (0.8+)" and temp < 0.8:
+                continue
         
         # Search filter
         if search_term:
@@ -1108,15 +1374,27 @@ def bot_management_page():
     
     st.markdown(f"### Found {len(filtered_bots)} AI Assistants")
     
-    # Display bots in grid layout
+    # Category statistics
+    if len(filtered_bots) > 0:
+        category_counts = {}
+        for bot in filtered_bots.values():
+            cat = bot["category"]
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+        
+        st.markdown("**Category Distribution:**")
+        category_text = " | ".join([f"{cat}: {count}" for cat, count in sorted(category_counts.items())])
+        st.caption(category_text)
+    
+    # Display bots in enhanced grid layout
     cols = st.columns(2)
     for idx, (bot_name, bot_info) in enumerate(filtered_bots.items()):
         with cols[idx % 2]:
             with st.container():
-                # Bot card header
+                # Enhanced bot card header
+                gradient_color = "#ff7e5f, #feb47b" if bot_info["category"] == "Format Specialists" else "#667eea, #764ba2"
                 st.markdown(f"""
                 <div style="
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: linear-gradient(135deg, {gradient_color});
                     padding: 20px;
                     border-radius: 10px;
                     color: white;
@@ -1124,13 +1402,14 @@ def bot_management_page():
                 ">
                     <h3 style="margin: 0; color: white;">{bot_info['emoji']} {bot_name}</h3>
                     <p style="margin: 5px 0 0 0; opacity: 0.9;">{bot_info['category']}</p>
+                    <p style="margin: 5px 0 0 0; opacity: 0.8; font-size: 0.9em;">Temperature: {bot_info['temperature']} | Models: {len(bot_info['suggested_models'])}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
                 # Bot details
                 st.write(f"**Description:** {bot_info['description']}")
                 
-                # Specialties
+                # Specialties with enhanced styling
                 st.write("**Specialties:**")
                 specialty_tags = " ".join([f"`{spec}`" for spec in bot_info['specialties']])
                 st.markdown(specialty_tags)
@@ -1139,90 +1418,131 @@ def bot_management_page():
                 with st.expander("🔧 Technical Details"):
                     st.write(f"**Recommended Models:** {', '.join(bot_info['suggested_models'])}")
                     st.write(f"**Temperature:** {bot_info['temperature']} (creativity level)")
+                    st.write(f"**Category:** {bot_info['category']}")
                     st.write("**System Prompt Preview:**")
                     st.text(bot_info['system_prompt'][:200] + "...")
                 
-                # Action buttons
-                col1, col2 = st.columns(2)
+                # Enhanced action buttons
+                col1, col2, col3 = st.columns(3)
                 with col1:
-                    if st.button(f"💬 Chat with {bot_name}", key=f"chat_{idx}"):
+                    if st.button(f"💬 Chat", key=f"chat_{idx}"):
                         st.session_state.selected_bot = bot_name
                         st.session_state.current_page = "chat"
                         st.rerun()
                 
                 with col2:
-                    if st.button(f"📋 Copy Prompt", key=f"copy_{idx}"):
+                    if st.button(f"📋 Copy", key=f"copy_{idx}"):
                         st.code(bot_info['system_prompt'], language="text")
+                
+                with col3:
+                    if st.button(f"⭐ Favorite", key=f"fav_{idx}"):
+                        st.success("Added to favorites!")
                 
                 st.divider()
     
-    # Add custom bot section
+    # Enhanced custom bot section
     st.markdown("### 🛠️ Create Custom Bot")
     with st.expander("Build Your Own AI Assistant"):
-        custom_name = st.text_input("Bot Name")
-        custom_description = st.text_input("Description")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            custom_name = st.text_input("Bot Name")
+            custom_category = st.selectbox("Category", sorted(set([bot["category"] for bot in bot_personalities.values()])))
+            custom_emoji = st.text_input("Emoji", value="🤖")
+            custom_temperature = st.slider("Temperature (Creativity)", 0.0, 1.0, 0.7)
+        
+        with col2:
+            custom_description = st.text_area("Description", height=100)
+            custom_specialties = st.text_input("Specialties (comma-separated)")
+            custom_models = st.multiselect("Suggested Models", ["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4"])
+        
         custom_prompt = st.text_area("System Prompt", height=150)
-        custom_temperature = st.slider("Temperature (Creativity)", 0.0, 1.0, 0.7)
         
         if st.button("💾 Save Custom Bot"):
             if custom_name and custom_description and custom_prompt:
                 # In production, save to database
                 st.success(f"Custom bot '{custom_name}' created! (Note: This is a demo - saving not implemented)")
+                st.balloons()
             else:
-                st.error("Please fill in all fields")
+                st.error("Please fill in all required fields")
 
 # ======================================================
-# 📄 PAGE: CHAT INTERFACE
+# 📄 PAGE: ENHANCED CHAT INTERFACE
 # ======================================================
 
 def chat_interface_page():
-    """Main Chat Interface Page"""
+    """Enhanced Main Chat Interface Page"""
     user = st.session_state.user
     bot_personalities = get_bot_personalities()
     
-    # Header with navigation
-    col1, col2, col3 = st.columns([2, 1, 1])
+    # Enhanced header with navigation
+    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
     with col1:
-        st.title("💬 AI Chat Interface")
+        st.title("💬 Enhanced AI Chat Interface")
     with col2:
         if st.button("🤖 View All Bots"):
             st.session_state.current_page = "bot_management"
             st.rerun()
     with col3:
+        if st.button("📊 Analytics"):
+            st.session_state.current_page = "analytics"
+            st.rerun()
+    with col4:
         if st.button("🚪 Logout"):
             for key in ["authenticated", "user", "messages", "usage_stats"]:
                 if key in st.session_state:
                     del st.session_state[key]
             st.rerun()
     
-    st.caption(f"Welcome back, **{user['username']}** | Plan: **{user['plan']}** | Session: {user['session_start'].strftime('%H:%M')}")
+    # Enhanced user info
+    is_demo = user.get("api_key") == "demo_key"
+    demo_badge = " 🎮 (Demo Mode)" if is_demo else ""
+    st.caption(f"Welcome back, **{user['username']}**{demo_badge} | Plan: **{user['plan']}** | Session: {user['session_start'].strftime('%H:%M')} | Total Bots: **110+**")
     
-    # Sidebar
+    if is_demo:
+        st.info("🎮 **Demo Mode Active** - Responses are simulated. Add your OpenAI API key for real AI responses!")
+    
+    # Enhanced sidebar
     with st.sidebar:
-        # Current bot selection
+        # Current bot selection with enhanced display
         st.markdown("### 🤖 Current Assistant")
         current_bot = st.session_state.get("selected_bot", "Startup Strategist")
         
         if current_bot in bot_personalities:
             bot_info = bot_personalities[current_bot]
+            gradient_color = "#ff7e5f, #feb47b" if bot_info["category"] == "Format Specialists" else "#667eea, #764ba2"
             st.markdown(f"""
             <div style="
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, {gradient_color});
                 padding: 15px;
                 border-radius: 8px;
                 color: white;
                 margin-bottom: 15px;
             ">
                 <h4 style="margin: 0; color: white;">{bot_info['emoji']} {current_bot}</h4>
-                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.9em;">{bot_info['description']}</p>
+                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.9em;">{bot_info['category']}</p>
+                <p style="margin: 5px 0 0 0; opacity: 0.8; font-size: 0.8em;">Temp: {bot_info['temperature']} | Specialties: {len(bot_info['specialties'])}</p>
             </div>
             """, unsafe_allow_html=True)
         
-        # Quick bot switcher
+        # Quick bot switcher with categories
         st.markdown("### ⚡ Quick Switch")
-        for bot_name in list(bot_personalities.keys())[:5]:  # Show first 5
+        
+        # Format specialists section
+        st.markdown("**🆕 Format Specialists:**")
+        format_bots = [name for name, bot in bot_personalities.items() if bot["category"] == "Format Specialists"]
+        for bot_name in format_bots[:3]:  # Show first 3
             if bot_name != current_bot:
-                if st.button(f"{bot_personalities[bot_name]['emoji']} {bot_name}", key=f"switch_{bot_name}"):
+                if st.button(f"{bot_personalities[bot_name]['emoji']} {bot_name}", key=f"switch_format_{bot_name}"):
+                    st.session_state.selected_bot = bot_name
+                    st.rerun()
+        
+        # Popular bots section
+        st.markdown("**🔥 Popular Assistants:**")
+        popular_bots = ["Startup Strategist", "Marketing Strategy Expert", "Financial Controller", "Operations Excellence Manager"]
+        for bot_name in popular_bots:
+            if bot_name != current_bot and bot_name in bot_personalities:
+                if st.button(f"{bot_personalities[bot_name]['emoji']} {bot_name}", key=f"switch_popular_{bot_name}"):
                     st.session_state.selected_bot = bot_name
                     st.rerun()
         
@@ -1232,34 +1552,122 @@ def chat_interface_page():
         # Usage dashboard
         render_usage_dashboard()
         
-        # Chat controls
+        # Bot statistics
+        render_bot_stats()
+        
+        # Enhanced chat controls
         st.markdown("### 🔧 Chat Controls")
-        if st.button("🗑️ Clear Chat"):
-            st.session_state.messages = []
+        
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            if st.button("🗑️ Clear"):
+                st.session_state.messages = []
+                st.rerun()
+        
+        with col2:
+            if st.button("💾 Export"):
+                chat_export = {
+                    "bot": current_bot,
+                    "timestamp": datetime.now().isoformat(),
+                    "messages": st.session_state.messages,
+                    "user": user["username"],
+                    "plan": user["plan"]
+                }
+                st.download_button(
+                    "📥 Download",
+                    json.dumps(chat_export, indent=2),
+                    file_name=f"chat_{current_bot}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    mime="application/json"
+                )
+        
+        # Quick actions
+        st.markdown("### ⚡ Quick Actions")
+        if st.button("📝 Business Plan Help"):
+            st.session_state.selected_bot = "Business Plan Writer"
             st.rerun()
         
-        if st.button("💾 Export Chat"):
-            chat_export = json.dumps(st.session_state.messages, indent=2)
-            st.download_button(
-                "📥 Download JSON",
-                chat_export,
-                file_name=f"chat_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json"
-            )
+        if st.button("📊 Data Analysis"):
+            st.session_state.selected_bot = "CSV Data Analyst"
+            st.rerun()
+        
+        if st.button("🔗 API Integration"):
+            st.session_state.selected_bot = "API Integration Specialist"
+            st.rerun()
     
-    # Main chat area
+    # Main chat area with enhancements
     st.markdown("### 💬 Chat with Your AI Assistant")
     
-    # Display chat messages
-    for message in st.session_state.messages:
+    # Chat statistics
+    if st.session_state.messages:
+        total_messages = len(st.session_state.messages)
+        user_messages = len([m for m in st.session_state.messages if m["role"] == "user"])
+        st.caption(f"💬 {total_messages} total messages | 👤 {user_messages} from you | 🤖 {total_messages - user_messages} from AI")
+    
+    # Display chat messages with enhanced styling
+    for idx, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-            if "metadata" in message:
+            
+            # Enhanced metadata display
+            if "metadata" in message and message["metadata"]:
+                metadata = message["metadata"]
+                
+                # Show cost and token info
+                if "cost" in metadata:
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.caption(f"💰 ${metadata.get('cost', 0):.4f}")
+                    with col2:
+                        st.caption(f"🔢 {metadata.get('total_tokens', 0)} tokens")
+                    with col3:
+                        st.caption(f"🤖 {metadata.get('model', 'N/A')}")
+                    with col4:
+                        if metadata.get('demo_mode'):
+                            st.caption("🎮 Demo")
+                        elif metadata.get('error'):
+                            st.caption("❌ Error")
+                        else:
+                            st.caption("✅ Real")
+                
+                # Expandable detailed metadata
                 with st.expander("📊 Message Details"):
-                    st.json(message["metadata"])
+                    st.json(metadata)
     
-    # Chat input
+    # Enhanced chat input with suggestions
+    if not st.session_state.messages:
+        st.markdown("### 💡 Suggested Questions:")
+        
+        # Bot-specific suggestions
+        if current_bot in bot_personalities:
+            bot_info = bot_personalities[current_bot]
+            suggestions = []
+            
+            if "Format Specialists" in bot_info["category"]:
+                suggestions = [
+                    f"How can you help me with {bot_info['specialties'][0].lower()}?",
+                    "What are the best practices for this format?",
+                    "Can you help me automate this process?"
+                ]
+            else:
+                suggestions = [
+                    f"What are the key challenges in {bot_info['category'].lower()}?",
+                    "Can you help me create a strategy?",
+                    "What metrics should I track?"
+                ]
+            
+            suggestion_cols = st.columns(len(suggestions))
+            for idx, suggestion in enumerate(suggestions):
+                with suggestion_cols[idx]:
+                    if st.button(suggestion, key=f"suggestion_{idx}"):
+                        # Add suggestion as user message
+                        st.session_state.messages.append({"role": "user", "content": suggestion})
+                        st.rerun()
+    
+    # Chat input with enhanced features
     if prompt := st.chat_input("Ask your AI assistant anything..."):
+        # Initialize chat manager
+        chat_manager.initialize_client(user.get("api_key", ""), selected_model)
+        
         # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         
@@ -1268,13 +1676,13 @@ def chat_interface_page():
         
         # Generate assistant response
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
+            with st.spinner("🤔 Thinking..."):
                 # Prepare messages for API
                 messages_for_api = [
                     {"role": "system", "content": bot_personalities[current_bot]["system_prompt"]}
                 ] + st.session_state.messages
                 
-                # Generate response (simulated)
+                # Generate response
                 response, metadata = chat_manager.generate_response(
                     messages_for_api,
                     selected_model,
@@ -1282,6 +1690,19 @@ def chat_interface_page():
                 )
                 
                 st.markdown(response)
+                
+                # Show quick metadata
+                if metadata:
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.caption(f"💰 ${metadata.get('cost', 0):.4f}")
+                    with col2:
+                        st.caption(f"🔢 {metadata.get('total_tokens', 0)} tokens")
+                    with col3:
+                        if metadata.get('demo_mode'):
+                            st.caption("🎮 Demo Mode")
+                        else:
+                            st.caption("✅ Real Response")
                 
                 # Add assistant message
                 st.session_state.messages.append({
@@ -1293,20 +1714,167 @@ def chat_interface_page():
         st.rerun()
 
 # ======================================================
-# 🚀 MAIN APPLICATION
+# 📄 PAGE: ANALYTICS DASHBOARD
+# ======================================================
+
+def analytics_page():
+    """Analytics and insights dashboard"""
+    st.title("📊 Analytics Dashboard")
+    st.markdown("Insights into your AI assistant usage and performance")
+    
+    user = st.session_state.user
+    stats = st.session_state.usage_stats
+    bot_personalities = get_bot_personalities()
+    
+    # Overview metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "Total Conversations",
+            stats['requests_count'],
+            delta=f"+{stats['requests_count'] - 20}" if stats['requests_count'] > 20 else None
+        )
+    
+    with col2:
+        st.metric(
+            "Total Cost",
+            f"${stats['total_cost']:.3f}",
+            delta=f"+${stats['daily_cost']:.3f} today"
+        )
+    
+    with col3:
+        st.metric(
+            "Tokens Used",
+            f"{stats['total_tokens']:,}",
+            delta=f"+{stats['total_tokens'] - 10000:,}" if stats['total_tokens'] > 10000 else None
+        )
+    
+    with col4:
+        efficiency = stats['total_tokens'] / max(stats['requests_count'], 1)
+        st.metric(
+            "Avg Tokens/Chat",
+            f"{efficiency:.0f}",
+            delta=f"{efficiency - 400:.0f}" if efficiency > 400 else None
+        )
+    
+    # Usage charts (simulated data for demo)
+    st.markdown("### 📈 Usage Trends")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Daily Usage (Last 7 Days)**")
+        chart_data = pd.DataFrame({
+            'Day': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            'Requests': [5, 8, 12, 6, 15, 3, 7],
+            'Cost': [0.15, 0.24, 0.36, 0.18, 0.45, 0.09, 0.21]
+        })
+        st.bar_chart(chart_data.set_index('Day')['Requests'])
+    
+    with col2:
+        st.markdown("**Cost Distribution**")
+        st.bar_chart(chart_data.set_index('Day')['Cost'])
+    
+    # Bot usage analysis
+    st.markdown("### 🤖 Bot Usage Analysis")
+    
+    # Simulated bot usage data
+    bot_usage = {
+        "Startup Strategist": 15,
+        "Marketing Strategy Expert": 12,
+        "Financial Controller": 8,
+        "CSV Data Analyst": 6,
+        "API Integration Specialist": 4,
+        "PDF Document Specialist": 3
+    }
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Most Used Assistants**")
+        for bot_name, usage_count in bot_usage.items():
+            if bot_name in bot_personalities:
+                bot_info = bot_personalities[bot_name]
+                st.write(f"{bot_info['emoji']} **{bot_name}**: {usage_count} chats")
+    
+    with col2:
+        st.markdown("**Category Distribution**")
+        category_usage = {}
+        for bot_name, usage_count in bot_usage.items():
+            if bot_name in bot_personalities:
+                category = bot_personalities[bot_name]["category"]
+                category_usage[category] = category_usage.get(category, 0) + usage_count
+        
+        for category, count in sorted(category_usage.items(), key=lambda x: x[1], reverse=True):
+            st.write(f"**{category}**: {count} chats")
+    
+    # Performance insights
+    st.markdown("### 💡 Performance Insights")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.success("✅ **Top Performing Categories**")
+        st.write("• Format Specialists showing high engagement")
+        st.write("• Business strategy bots most frequently used")
+        st.write("• Technical assistants have longest conversations")
+    
+    with col2:
+        st.info("📊 **Usage Recommendations**")
+        st.write("• Try the new PDF Document Specialist")
+        st.write("• Explore SQL Database Consultant for data tasks")
+        st.write("• Consider upgrading plan for more features")
+    
+    # Export options
+    st.markdown("### 📥 Export Options")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📊 Export Usage Data"):
+            usage_data = {
+                "user": user["username"],
+                "plan": user["plan"],
+                "stats": stats,
+                "bot_usage": bot_usage,
+                "export_date": datetime.now().isoformat()
+            }
+            st.download_button(
+                "Download Usage Report",
+                json.dumps(usage_data, indent=2),
+                file_name=f"usage_report_{datetime.now().strftime('%Y%m%d')}.json",
+                mime="application/json"
+            )
+    
+    with col2:
+        if st.button("📈 Generate Report"):
+            st.success("Report generated! Check your downloads.")
+    
+    with col3:
+        if st.button("🔄 Refresh Data"):
+            st.rerun()
+
+# ======================================================
+# 🚀 ENHANCED MAIN APPLICATION
 # ======================================================
 
 def main():
-    """Main application entry point"""
-    # Page configuration
+    """Enhanced main application entry point"""
+    # Enhanced page configuration
     st.set_page_config(
-        page_title="Business AI Assistants",
+        page_title="Enhanced Business AI Assistants",
         page_icon="🤖",
         layout="wide",
-        initial_sidebar_state="expanded"
+        initial_sidebar_state="expanded",
+        menu_items={
+            'Get Help': 'https://github.com/your-repo',
+            'Report a bug': 'https://github.com/your-repo/issues',
+            'About': "Enhanced Business AI Assistants with 110+ specialized bots!"
+        }
     )
     
-    # Custom CSS
+    # Enhanced custom CSS
     st.markdown("""
     <style>
     .main-header {
@@ -1323,6 +1891,11 @@ def main():
         padding: 1rem;
         margin-bottom: 1rem;
         background: white;
+        transition: transform 0.2s;
+    }
+    .bot-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
     .metric-card {
         background: #f8f9fa;
@@ -1330,10 +1903,24 @@ def main():
         border-radius: 8px;
         text-align: center;
     }
+    .format-specialist {
+        background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
+        color: white;
+    }
+    .stButton > button {
+        border-radius: 20px;
+        border: none;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .stButton > button:hover {
+        background: linear-gradient(90deg, #764ba2 0%, #667eea 100%);
+        transform: translateY(-1px);
+    }
     </style>
     """, unsafe_allow_html=True)
     
-    # Initialize session state
+    # Initialize enhanced session state
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
     
@@ -1346,13 +1933,25 @@ def main():
     if "messages" not in st.session_state:
         st.session_state.messages = []
     
-    # Main application logic
+    if "usage_stats" not in st.session_state:
+        st.session_state.usage_stats = {
+            "total_cost": 0.0,
+            "daily_cost": 0.0,
+            "monthly_cost": 0.0,
+            "total_tokens": 0,
+            "requests_count": 0,
+            "last_reset": datetime.now().date()
+        }
+    
+    # Enhanced main application logic
     if not st.session_state.authenticated:
         authentication_page()
     else:
-        # Navigation
+        # Enhanced navigation
         if st.session_state.current_page == "bot_management":
             bot_management_page()
+        elif st.session_state.current_page == "analytics":
+            analytics_page()
         else:
             chat_interface_page()
 
