@@ -27,7 +27,6 @@ from langchain.schema import BaseMessage, HumanMessage, AIMessage, SystemMessage
 from langchain.callbacks import StreamlitCallbackHandler
 from langchain.agents import initialize_agent, AgentType, Tool
 from langchain.tools import BaseTool
-from langchain.utilities import SQLDatabaseChain
 from langchain.document_loaders import CSVLoader, PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import FAISS
