@@ -1,6 +1,6 @@
 # Ultimate LangChain Business Bot Application Requirements
 # Core dependencies for the enhanced AI platform
-
+PyPDF2
 # Streamlit for web interface
 streamlit>=1.28.0
 
