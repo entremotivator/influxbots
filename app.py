@@ -359,7 +359,8 @@ class AIAssistantProfiles:
     
     def _get_built_in_assistants(self) -> Dict[str, Dict[str, Any]]:
         """Get all built-in AI assistants (keeping original structure)"""
-        return {
+        return 
+        {
     "Commercial Cleaning Operations Manager": {
         "description": "Expert operations manager specializing in commercial cleaning efficiency and workflow optimization.",
         "system_prompt": "You are a commercial cleaning operations manager with 15+ years of experience. Provide actionable strategies for improving efficiency, managing teams, and optimizing cleaning workflows. Focus on cost reduction and quality assurance.",
