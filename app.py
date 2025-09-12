@@ -1596,15 +1596,16 @@ def main():
             initial_sidebar_state="expanded"
         )
         
-        # Custom CSS
+        # Custom CSS for Red/Black Theme
         st.markdown(f"""
         <style>
         .stApp {{
-            background: linear-gradient(135deg, {config_manager.get('theme_primary_color')}15 0%, {config_manager.get('theme_secondary_color')}15 100%);
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            color: #ffffff;
         }}
         
         .stButton > button {{
-            background: linear-gradient(135deg, {config_manager.get('theme_primary_color')} 0%, {config_manager.get('theme_secondary_color')} 100%);
+            background: linear-gradient(135deg, #ff0000 0%, #990000 100%);
             color: white;
             border: none;
             border-radius: 10px;
@@ -1615,53 +1616,56 @@ def main():
         
         .stButton > button:hover {{
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(255,0,0,0.5);
         }}
         
         .stSelectbox > div > div {{
-            background: white;
+            background: #1a1a1a;
+            color: white;
             border-radius: 10px;
+            border: 1px solid #ff0000;
         }}
         
         .stTextInput > div > div > input {{
+            background: #1a1a1a;
+            color: white;
+            border: 1px solid #ff0000;
             border-radius: 10px;
         }}
         
         .stFileUploader > div {{
             border-radius: 10px;
-            border: 2px dashed {config_manager.get('theme_primary_color')};
+            border: 2px dashed #ff0000;
+            background: #1a1a1a;
+            color: white;
         }}
         
         .stMetric {{
-            background: white;
+            background: #1a1a1a;
+            color: white;
             padding: 1rem;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid #ff0000;
+            box-shadow: 0 2px 10px rgba(255,0,0,0.2);
         }}
         
         .stExpander {{
-            background: white;
+            background: #1a1a1a;
+            color: white;
             border-radius: 10px;
-            border: 1px solid #e0e0e0;
+            border: 1px solid #ff0000;
         }}
         
         .stChatMessage {{
-            background: white;
+            background: #1a1a1a;
+            color: white;
             border-radius: 15px;
             padding: 1rem;
             margin: 0.5rem 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid #ff0000;
+            box-shadow: 0 2px 10px rgba(255,0,0,0.2);
         }}
         </style>
         """, unsafe_allow_html=True)
-        
-        # Render main chat interface
-        render_chat_interface()
-        
-    except Exception as e:
-        st.error(f"Application error: {str(e)}")
-        logger.error(f"Application error: {str(e)}")
 
-if __name__ == "__main__":
-    main()
 
