@@ -50,7 +50,7 @@ python-dotenv>=1.0.0
 # nltk>=3.8.0
 
 # For enhanced visualization
-# plotly>=5.17.0
+plotly
 # matplotlib>=3.7.0
 # seaborn>=0.12.0
 
