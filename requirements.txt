@@ -1,7 +1,4 @@
-# Enhanced Chat Bot with File Upload Requirements
-# Real API integration, personal prompts, and comprehensive file upload
 
-# Core dependencies
 streamlit>=1.28.0
 openai>=1.0.0
 tiktoken>=0.5.0
